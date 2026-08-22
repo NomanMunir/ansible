@@ -1,0 +1,66 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+
+  # Base box definition (Ubuntu 22.04 LTS)
+  # bento/ubuntu-22.04 is high quality and supports both VirtualBox and Libvirt
+  config.vm.box = "bento/ubuntu-22.04"
+
+  # Target Nodes Definitions (Targets provision first so SSH is ready for the controller)
+  TARGET_NODES = [
+    { name: "target-1", ip: "192.168.56.11", cpu: 1, mem: 1024 },
+    { name: "target-2", ip: "192.168.56.12", cpu: 1, mem: 1024 }
+  ]
+
+  # Provision Target Nodes
+  TARGET_NODES.each do |node|
+    config.vm.define node[:name] do |target|
+      target.vm.hostname = node[:name]
+      target.vm.network "private_network", ip: node[:ip]
+
+      # VirtualBox Provider Settings
+      target.vm.provider "virtualbox" do |vb|
+        vb.name = "ansible-#{node[:name]}"
+        vb.cpus = node[:cpu]
+        vb.memory = node[:mem]
+        vb.linked_clone = true if Gem::Version.new(Vagrant::VERSION) >= Gem::Version.new('1.8.0')
+      end
+
+      # Libvirt (KVM/QEMU for WSL2) Provider Settings
+      target.vm.provider "libvirt" do |lv|
+        lv.cpus = node[:cpu]
+        lv.memory = node[:mem]
+      end
+
+      # Provisioning
+      target.vm.provision "shell", path: "scripts/common.sh"
+      target.vm.provision "shell", path: "scripts/setup-target.sh"
+    end
+  end
+
+  # Provision Ansible Control Node
+  config.vm.define "control-node" do |control|
+    control.vm.hostname = "control-node"
+    control.vm.network "private_network", ip: "192.168.56.10"
+
+    # VirtualBox Provider Settings
+    control.vm.provider "virtualbox" do |vb|
+      vb.name = "ansible-control-node"
+      vb.cpus = 2
+      vb.memory = 2048
+      vb.linked_clone = true if Gem::Version.new(Vagrant::VERSION) >= Gem::Version.new('1.8.0')
+    end
+
+    # Libvirt (KVM/QEMU for WSL2) Provider Settings
+    control.vm.provider "libvirt" do |lv|
+      lv.cpus = 2
+      lv.memory = 2048
+    end
+
+    # Provisioning
+    control.vm.provision "shell", path: "scripts/common.sh"
+    control.vm.provision "shell", path: "scripts/setup-controller.sh"
+  end
+
+end
