@@ -7,11 +7,13 @@ echo "========================================="
 
 export DEBIAN_FRONTEND=noninteractive
 
-# Add official Ansible PPA for the latest stable Ansible release
-echo "--> Adding Ansible PPA..."
-add-apt-repository -y ppa:ansible/ansible
-apt-get update -y
-apt-get install -y ansible
+# Install Ansible (works across Debian and Ubuntu)
+echo "--> Installing Ansible..."
+if grep -qi ubuntu /etc/os-release 2>/dev/null; then
+    add-apt-repository -y ppa:ansible/ansible 2>/dev/null || true
+    apt-get update -y
+fi
+apt-get install -y ansible || pip3 install --break-system-packages ansible
 
 # Function to configure SSH key and Ansible workspace for a user
 setup_user_environment() {

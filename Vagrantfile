@@ -3,14 +3,14 @@
 
 Vagrant.configure("2") do |config|
 
-  # Base box definition (Ubuntu 22.04 LTS)
-  # bento/ubuntu-22.04 is high quality and supports both VirtualBox and Libvirt
-  config.vm.box = "bento/ubuntu-22.04"
+  # Base box definition (Debian 12 Bookworm - Lightweight & Fast)
+  # generic/debian12 officially supports Hyper-V, Libvirt, and VirtualBox
+  config.vm.box = "generic/debian12"
 
-  # Target Nodes Definitions (Targets provision first so SSH is ready for the controller)
+  # Target Nodes Definitions (Minimum Specs: 1 vCPU, 512 MB RAM)
   TARGET_NODES = [
-    { name: "target-1", ip: "192.168.56.11", cpu: 1, mem: 1024 },
-    { name: "target-2", ip: "192.168.56.12", cpu: 1, mem: 1024 }
+    { name: "target-1", ip: "192.168.56.11", cpu: 1, mem: 512 },
+    { name: "target-2", ip: "192.168.56.12", cpu: 1, mem: 512 }
   ]
 
   # Provision Target Nodes
@@ -33,13 +33,20 @@ Vagrant.configure("2") do |config|
         lv.memory = node[:mem]
       end
 
+      # Hyper-V Provider Settings (Windows Native Hyper-V)
+      target.vm.provider "hyperv" do |h|
+        h.vmname = "ansible-#{node[:name]}"
+        h.cpus = node[:cpu]
+        h.memory = node[:mem]
+      end
+
       # Provisioning
       target.vm.provision "shell", path: "scripts/common.sh"
       target.vm.provision "shell", path: "scripts/setup-target.sh"
     end
   end
 
-  # Provision Ansible Control Node
+  # Provision Ansible Control Node (Minimum Specs: 1 vCPU, 1024 MB RAM)
   config.vm.define "control-node" do |control|
     control.vm.hostname = "control-node"
     control.vm.network "private_network", ip: "192.168.56.10"
@@ -47,15 +54,22 @@ Vagrant.configure("2") do |config|
     # VirtualBox Provider Settings
     control.vm.provider "virtualbox" do |vb|
       vb.name = "ansible-control-node"
-      vb.cpus = 2
-      vb.memory = 2048
+      vb.cpus = 1
+      vb.memory = 1024
       vb.linked_clone = true if Gem::Version.new(Vagrant::VERSION) >= Gem::Version.new('1.8.0')
     end
 
     # Libvirt (KVM/QEMU for WSL2) Provider Settings
     control.vm.provider "libvirt" do |lv|
-      lv.cpus = 2
-      lv.memory = 2048
+      lv.cpus = 1
+      lv.memory = 1024
+    end
+
+    # Hyper-V Provider Settings (Windows Native Hyper-V)
+    control.vm.provider "hyperv" do |h|
+      h.vmname = "ansible-control-node"
+      h.cpus = 1
+      h.memory = 1024
     end
 
     # Provisioning

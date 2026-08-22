@@ -23,11 +23,11 @@ This repository sets up a complete, automated 3-node Linux environment for Ansib
 +---------------------------+ +---------------------------+
 ```
 
-| Node Name | Role | IP Address | User / Password | Specs |
-| :--- | :--- | :--- | :--- | :--- |
-| `control-node` | Ansible Controller | `192.168.56.10` | `vagrant` / `vagrant`<br>`ansible` / `ansible` | 2 vCPU, 2GB RAM |
-| `target-1` | Managed Target 1 | `192.168.56.11` | `vagrant` / `vagrant`<br>`ansible` / `ansible` | 1 vCPU, 1GB RAM |
-| `target-2` | Managed Target 2 | `192.168.56.12` | `vagrant` / `vagrant`<br>`ansible` / `ansible` | 1 vCPU, 1GB RAM |
+| Node Name | Role | OS | IP Address | User / Password | Specs |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `control-node` | Ansible Controller | Debian 12 (Bookworm) | `192.168.56.10` | `vagrant` / `vagrant`<br>`ansible` / `ansible` | 2 vCPU, 2GB RAM |
+| `target-1` | Managed Target 1 | Debian 12 (Bookworm) | `192.168.56.11` | `vagrant` / `vagrant`<br>`ansible` / `ansible` | 1 vCPU, 1GB RAM |
+| `target-2` | Managed Target 2 | Debian 12 (Bookworm) | `192.168.56.12` | `vagrant` / `vagrant`<br>`ansible` / `ansible` | 1 vCPU, 1GB RAM |
 
 ---
 
@@ -75,8 +75,22 @@ If you prefer standard VirtualBox on Windows:
 1. Install [VirtualBox](https://www.virtualbox.org/) and [Vagrant for Windows](https://developer.hashicorp.com/vagrant/install).
 2. Open **PowerShell** or **Windows Terminal** in this project directory:
    ```powershell
-   vagrant up
+   vagrant up --provider=virtualbox
    ```
+
+---
+
+## 🪟 Option C: Running on Windows Host (Hyper-V)
+
+If you have Hyper-V enabled on Windows (Windows Pro/Enterprise/Education):
+
+1. Make sure Hyper-V is enabled in Windows Features.
+2. Open **PowerShell as Administrator** in this project directory.
+3. Launch the lab with Hyper-V provider:
+   ```powershell
+   vagrant up --provider=hyperv
+   ```
+   *(Note: Hyper-V requires Administrator privileges to configure virtual switches).*
 
 ---
 
