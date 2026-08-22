@@ -1,0 +1,65 @@
+# =========================
+# Vagrant
+# =========================
+.vagrant/
+.vagrant.d/
+*.box
+
+# =========================
+# Ansible
+# =========================
+*.retry
+.ansible/
+retry_files/
+facts/
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# =========================
+# SSH / Keys / Secrets
+# =========================
+*.pem
+*.key
+*.pub
+id_rsa*
+*.vault_pass
+.vault-pass*
+
+# =========================
+# OS & Editor specific
+# =========================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# JetBrains (IntelliJ, PyCharm, etc.)
+.idea/
+
+# Logs & Temporary Files
+*.log
+tmp/
+temp/
