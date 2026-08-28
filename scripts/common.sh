@@ -36,9 +36,9 @@ sed -i '/target-1/d' /etc/hosts
 sed -i '/target-2/d' /etc/hosts
 
 cat << 'EOF' >> /etc/hosts
-192.168.56.10 control-node
-192.168.56.11 target-1
-192.168.56.12 target-2
+192.168.77.10 control-node
+192.168.77.11 target-1
+192.168.77.12 target-2
 EOF
 
 # Create dedicated 'ansible' user if it doesn't already exist

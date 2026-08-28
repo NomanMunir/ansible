@@ -9,7 +9,7 @@ This repository sets up a complete, automated 3-node Linux environment for Ansib
 ```text
                +---------------------------+
                |       control-node        |
-               |       192.168.56.10       |
+               |       192.168.77.10       |
                | (Ansible, SSH Key Master) |
                +-------------+-------------+
                              |
@@ -18,16 +18,16 @@ This repository sets up a complete, automated 3-node Linux environment for Ansib
               v                             v
 +---------------------------+ +---------------------------+
 |         target-1          | |         target-2          |
-|       192.168.56.11       | |       192.168.56.12       |
+|       192.168.77.11       | |       192.168.77.12       |
 |    (Group: webservers)    | |    (Group: dbservers)     |
 +---------------------------+ +---------------------------+
 ```
 
 | Node Name | Role | OS | IP Address | User / Password | Specs |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `control-node` | Ansible Controller | Debian 12 (Bookworm) | `192.168.56.10` | `vagrant` / `vagrant`<br>`ansible` / `ansible` | 2 vCPU, 2GB RAM |
-| `target-1` | Managed Target 1 | Debian 12 (Bookworm) | `192.168.56.11` | `vagrant` / `vagrant`<br>`ansible` / `ansible` | 1 vCPU, 1GB RAM |
-| `target-2` | Managed Target 2 | Debian 12 (Bookworm) | `192.168.56.12` | `vagrant` / `vagrant`<br>`ansible` / `ansible` | 1 vCPU, 1GB RAM |
+| `control-node` | Ansible Controller | Debian 12 (Bookworm) | `192.168.77.10` | `vagrant` / `vagrant`<br>`ansible` / `ansible` | 2 vCPU, 2GB RAM |
+| `target-1` | Managed Target 1 | Debian 12 (Bookworm) | `192.168.77.11` | `vagrant` / `vagrant`<br>`ansible` / `ansible` | 1 vCPU, 1GB RAM |
+| `target-2` | Managed Target 2 | Debian 12 (Bookworm) | `192.168.77.12` | `vagrant` / `vagrant`<br>`ansible` / `ansible` | 1 vCPU, 1GB RAM |
 
 ---
 
@@ -123,10 +123,10 @@ ansible --version
 Create an inventory file named `inventory.ini` or `hosts`:
 ```ini
 [webservers]
-target-1 ansible_host=192.168.56.11
+target-1 ansible_host=192.168.77.11
 
 [dbservers]
-target-2 ansible_host=192.168.56.12
+target-2 ansible_host=192.168.77.12
 ```
 
 ### Step 3: Test Ad-Hoc Ping Command

@@ -4,20 +4,23 @@
 Vagrant.configure("2") do |config|
 
   # Base box definition (Debian 12 Bookworm - Lightweight & Fast)
-  # generic/debian12 officially supports Hyper-V, Libvirt, and VirtualBox
   config.vm.box = "generic/debian12"
 
   # Target Nodes Definitions (Minimum Specs: 1 vCPU, 512 MB RAM)
+  # Uses 192.168.77.x subnet to prevent conflicts with host network interfaces
   TARGET_NODES = [
-    { name: "target-1", ip: "192.168.56.11", cpu: 1, mem: 512 },
-    { name: "target-2", ip: "192.168.56.12", cpu: 1, mem: 512 }
+    { name: "target-1", ip: "192.168.77.11", cpu: 1, mem: 512 },
+    { name: "target-2", ip: "192.168.77.12", cpu: 1, mem: 512 }
   ]
 
   # Provision Target Nodes
   TARGET_NODES.each do |node|
     config.vm.define node[:name] do |target|
       target.vm.hostname = node[:name]
-      target.vm.network "private_network", ip: node[:ip]
+      target.vm.network "private_network", 
+        ip: node[:ip], 
+        libvirt__network_name: "ansible-net",
+        libvirt__dhcp_enabled: false
 
       # VirtualBox Provider Settings
       target.vm.provider "virtualbox" do |vb|
@@ -27,7 +30,7 @@ Vagrant.configure("2") do |config|
         vb.linked_clone = true if Gem::Version.new(Vagrant::VERSION) >= Gem::Version.new('1.8.0')
       end
 
-      # Libvirt (KVM/QEMU for WSL2) Provider Settings
+      # Libvirt (KVM/QEMU for Debian/WSL2) Provider Settings
       target.vm.provider "libvirt" do |lv|
         lv.cpus = node[:cpu]
         lv.memory = node[:mem]
@@ -49,7 +52,10 @@ Vagrant.configure("2") do |config|
   # Provision Ansible Control Node (Minimum Specs: 1 vCPU, 1024 MB RAM)
   config.vm.define "control-node" do |control|
     control.vm.hostname = "control-node"
-    control.vm.network "private_network", ip: "192.168.56.10"
+    control.vm.network "private_network", 
+      ip: "192.168.77.10", 
+      libvirt__network_name: "ansible-net",
+      libvirt__dhcp_enabled: false
 
     # VirtualBox Provider Settings
     control.vm.provider "virtualbox" do |vb|
@@ -59,7 +65,7 @@ Vagrant.configure("2") do |config|
       vb.linked_clone = true if Gem::Version.new(Vagrant::VERSION) >= Gem::Version.new('1.8.0')
     end
 
-    # Libvirt (KVM/QEMU for WSL2) Provider Settings
+    # Libvirt (KVM/QEMU for Debian/WSL2) Provider Settings
     control.vm.provider "libvirt" do |lv|
       lv.cpus = 1
       lv.memory = 1024
