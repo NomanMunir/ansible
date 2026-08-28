@@ -31,39 +31,37 @@ This repository sets up a complete, automated 3-node Linux environment for Ansib
 
 ---
 
-## ⚡ Option A: Running Native in WSL2 (KVM / Libvirt)
+## ⚡ Automated Host Setup Script
 
-If you want to run everything 100% inside WSL2 without VirtualBox:
+Your host machine **only** needs Vagrant and Virtualization to spin up the VMs. All Ansible tools are automatically installed and isolated inside the `control-node` VM.
 
-### 1. Enable Nested Virtualization in Windows
-In `C:\Users\<YourUsername>\.wslconfig`:
-```ini
-[wsl2]
-nestedVirtualization=true
-```
-Then restart WSL in PowerShell: `wsl --shutdown`
-
-### 2. Install KVM, Libvirt & Vagrant in WSL2
-Inside your Ubuntu WSL2 terminal:
+### 🐧 Host Machine Setup (1-Command)
+Inside your host terminal:
 ```bash
-sudo apt update
-sudo apt install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils vagrant libvirt-dev build-essential
-sudo usermod -aG kvm,libvirt $USER
-newgrp libvirt
-
-# Start libvirt service and default network
-sudo systemctl enable --now libvirtd
-sudo virsh net-start default 2>/dev/null || true
-sudo virsh net-autostart default
-
-# Install Vagrant Libvirt plugin
-vagrant plugin install vagrant-libvirt
+chmod +x setup-env.sh
+./setup-env.sh
 ```
+*This installs Vagrant, KVM/Libvirt, the `vagrant-libvirt` plugin, and configures virtualization services.*
 
-### 3. Launch Lab in WSL2
+Then launch the lab:
 ```bash
-cd /path/to/ansible-lab-dir
 vagrant up --provider=libvirt
+# or if VirtualBox is installed: vagrant up --provider=virtualbox
+```
+
+---
+
+### 🪟 Option 2: Windows Host
+Open **PowerShell as Administrator** in this directory:
+```powershell
+.\setup-windows.ps1
+```
+*This checks/installs Vagrant, checks Hyper-V & VirtualBox availability, and ensures OpenSSH is ready.*
+
+Then launch the lab:
+```powershell
+vagrant up --provider=hyperv
+# or: vagrant up --provider=virtualbox
 ```
 
 ---

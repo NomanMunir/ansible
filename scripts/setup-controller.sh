@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -u
 
 echo "========================================="
 echo " [CONTROLLER] Setting up Ansible Controller..."
@@ -7,13 +7,31 @@ echo "========================================="
 
 export DEBIAN_FRONTEND=noninteractive
 
-# Install Ansible (works across Debian and Ubuntu)
-echo "--> Installing Ansible..."
-if grep -qi ubuntu /etc/os-release 2>/dev/null; then
-    add-apt-repository -y ppa:ansible/ansible 2>/dev/null || true
-    apt-get update -y
-fi
-apt-get install -y ansible || pip3 install --break-system-packages ansible
+# Update system package list
+echo "--> Updating package list..."
+apt-get update -y
+
+# Install Ansible, CLI tools, and Python utilities required for advanced playbooks
+echo "--> Installing Ansible, Linting tools, and Python libraries..."
+apt-get install -y \
+    ansible \
+    ansible-lint \
+    yamllint \
+    sshpass \
+    tree \
+    jq \
+    git \
+    curl \
+    wget \
+    vim \
+    nano \
+    netcat-openbsd \
+    python3-pip \
+    python3-venv \
+    python3-passlib \
+    python3-netaddr \
+    python3-jmespath \
+    rsync || true
 
 # Function to configure SSH key and Ansible workspace for a user
 setup_user_environment() {
@@ -22,38 +40,11 @@ setup_user_environment() {
     local USER_HOME
     USER_HOME=$(getent passwd "$USERNAME" | cut -d: -f6)
 
-    echo "--> Configuring SSH keypair for $USERNAME..."
-    mkdir -p "$USER_HOME/.ssh"
-    if [ ! -f "$USER_HOME/.ssh/id_rsa" ]; then
-        ssh-keygen -t rsa -b 2048 -f "$USER_HOME/.ssh/id_rsa" -N "" -q
-    fi
-    chown -R "$USERNAME:$USERNAME" "$USER_HOME/.ssh"
-    chmod 700 "$USER_HOME/.ssh"
-    chmod 600 "$USER_HOME/.ssh/id_rsa"
-    chmod 644 "$USER_HOME/.ssh/id_rsa.pub"
-
-    # Distribute SSH public key to target nodes
-    TARGET_NODES=("target-1" "target-2" "control-node")
-    for TARGET in "${TARGET_NODES[@]}"; do
-        echo "--> Copying SSH key to $TARGET for user $USERNAME..."
-        # Wait until target is reachable on port 22
-        for attempt in {1..20}; do
-            if nc -z -w 2 "$TARGET" 22 2>/dev/null; then
-                break
-            fi
-            sleep 2
-        done
-
-        sshpass -p "$USER_PASS" ssh-copy-id \
-            -o StrictHostKeyChecking=no \
-            -o UserKnownHostsFile=/dev/null \
-            -i "$USER_HOME/.ssh/id_rsa.pub" \
-            "$USERNAME@$TARGET" 2>/dev/null || true
-    done
-
-    # Create Ansible Lab Workspace
+    # 1. ALWAYS Create the Ansible Lab Workspace first
     local LAB_DIR="$USER_HOME/ansible-lab"
+    echo "--> Creating Ansible lab workspace at $LAB_DIR..."
     mkdir -p "$LAB_DIR/playbooks"
+    mkdir -p "$LAB_DIR/roles"
 
     # Create ansible.cfg
     cat << EOF > "$LAB_DIR/ansible.cfg"
@@ -64,6 +55,8 @@ host_key_checking = False
 retry_files_enabled = False
 stdout_callback = yaml
 deprecation_warnings = False
+collections_path = ~/.ansible/collections:/usr/share/ansible/collections
+roles_path = ./roles:~/.ansible/roles:/etc/ansible/roles
 
 [privilege_escalation]
 become = True
@@ -140,6 +133,28 @@ EOF
 EOF
 
     chown -R "$USERNAME:$USERNAME" "$LAB_DIR"
+
+    # 2. Configure SSH keypair for the user
+    echo "--> Configuring SSH keypair for $USERNAME..."
+    mkdir -p "$USER_HOME/.ssh"
+    if [ ! -f "$USER_HOME/.ssh/id_rsa" ]; then
+        ssh-keygen -t rsa -b 2048 -f "$USER_HOME/.ssh/id_rsa" -N "" -q
+    fi
+    chown -R "$USERNAME:$USERNAME" "$USER_HOME/.ssh"
+    chmod 700 "$USER_HOME/.ssh"
+    chmod 600 "$USER_HOME/.ssh/id_rsa"
+    chmod 644 "$USER_HOME/.ssh/id_rsa.pub"
+
+    # 3. Distribute SSH public key to target nodes
+    TARGET_NODES=("target-1" "target-2" "control-node")
+    for TARGET in "${TARGET_NODES[@]}"; do
+        echo "--> Distributing SSH key to $TARGET for user $USERNAME..."
+        sshpass -p "$USER_PASS" ssh-copy-id \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -i "$USER_HOME/.ssh/id_rsa.pub" \
+            "$USERNAME@$TARGET" 2>/dev/null || true
+    done
 }
 
 # Setup for both 'vagrant' and 'ansible' users
