@@ -1,141 +1,24 @@
 #!/usr/bin/env bash
 set -u
 
-echo "========================================="
-echo " [CONTROLLER] Setting up Ansible Controller..."
-echo "========================================="
+echo "=========================================================="
+echo " [CONTROLLER] Configuring SSH Keys on control-node..."
+echo "=========================================================="
 
 export DEBIAN_FRONTEND=noninteractive
 
-# Update system package list
-echo "--> Updating package list..."
+# Install sshpass (needed only for initial non-interactive key distribution)
 apt-get update -y
+apt-get install -y sshpass netcat-openbsd curl || true
 
-# Install Ansible, CLI tools, and Python utilities required for advanced playbooks
-echo "--> Installing Ansible, Linting tools, and Python libraries..."
-apt-get install -y \
-    ansible \
-    ansible-lint \
-    yamllint \
-    sshpass \
-    tree \
-    jq \
-    git \
-    curl \
-    wget \
-    vim \
-    nano \
-    netcat-openbsd \
-    python3-pip \
-    python3-venv \
-    python3-passlib \
-    python3-netaddr \
-    python3-jmespath \
-    rsync || true
-
-# Function to configure SSH key and Ansible workspace for a user
-setup_user_environment() {
+# Function to configure and distribute SSH keys for a user
+setup_ssh_keys() {
     local USERNAME="$1"
     local USER_PASS="$2"
     local USER_HOME
     USER_HOME=$(getent passwd "$USERNAME" | cut -d: -f6)
 
-    # 1. ALWAYS Create the Ansible Lab Workspace first
-    local LAB_DIR="$USER_HOME/ansible-lab"
-    echo "--> Creating Ansible lab workspace at $LAB_DIR..."
-    mkdir -p "$LAB_DIR/playbooks"
-    mkdir -p "$LAB_DIR/roles"
-
-    # Create ansible.cfg
-    cat << EOF > "$LAB_DIR/ansible.cfg"
-[defaults]
-inventory = ./inventory.ini
-remote_user = $USERNAME
-host_key_checking = False
-retry_files_enabled = False
-stdout_callback = yaml
-deprecation_warnings = False
-collections_path = ~/.ansible/collections:/usr/share/ansible/collections
-roles_path = ./roles:~/.ansible/roles:/etc/ansible/roles
-
-[privilege_escalation]
-become = True
-become_method = sudo
-become_user = root
-become_ask_pass = False
-EOF
-
-    # Create inventory.ini
-    cat << 'EOF' > "$LAB_DIR/inventory.ini"
-[control]
-control-node ansible_host=192.168.56.10
-
-[webservers]
-target-1 ansible_host=192.168.56.11
-
-[dbservers]
-target-2 ansible_host=192.168.56.12
-
-[targets:children]
-webservers
-dbservers
-
-[all:vars]
-ansible_python_interpreter=/usr/bin/python3
-EOF
-
-    # Create Ping Test Playbook
-    cat << 'EOF' > "$LAB_DIR/playbooks/01-ping.yml"
----
-- name: Test Connectivity to All Nodes
-  hosts: all
-  gather_facts: false
-  tasks:
-    - name: Ping host
-      ansible.builtin.ping:
-EOF
-
-    # Create Facts Gathering Playbook
-    cat << 'EOF' > "$LAB_DIR/playbooks/02-gather-facts.yml"
----
-- name: Gather Facts and Show System Info
-  hosts: targets
-  tasks:
-    - name: Display Hostname and IP
-      ansible.builtin.debug:
-        msg: "Hostname: {{ ansible_hostname }} | OS: {{ ansible_distribution }} {{ ansible_distribution_version }} | IP: {{ ansible_default_ipv4.address }}"
-EOF
-
-    # Create Sample Nginx Setup Playbook
-    cat << 'EOF' > "$LAB_DIR/playbooks/03-install-nginx.yml"
----
-- name: Install and Configure Nginx on Webservers
-  hosts: webservers
-  become: true
-  tasks:
-    - name: Update apt cache and install Nginx
-      ansible.builtin.apt:
-        name: nginx
-        state: present
-        update_cache: true
-
-    - name: Ensure Nginx service is running and enabled
-      ansible.builtin.service:
-        name: nginx
-        state: started
-        enabled: true
-
-    - name: Deploy custom index page
-      ansible.builtin.copy:
-        content: "<h1>Hello from Ansible Managed Node: {{ ansible_hostname }}</h1>\n"
-        dest: /var/www/html/index.html
-        mode: '0644'
-EOF
-
-    chown -R "$USERNAME:$USERNAME" "$LAB_DIR"
-
-    # 2. Configure SSH keypair for the user
-    echo "--> Configuring SSH keypair for $USERNAME..."
+    echo "--> Generating SSH keypair for $USERNAME (if not present)..."
     mkdir -p "$USER_HOME/.ssh"
     if [ ! -f "$USER_HOME/.ssh/id_rsa" ]; then
         ssh-keygen -t rsa -b 2048 -f "$USER_HOME/.ssh/id_rsa" -N "" -q
@@ -145,10 +28,17 @@ EOF
     chmod 600 "$USER_HOME/.ssh/id_rsa"
     chmod 644 "$USER_HOME/.ssh/id_rsa.pub"
 
-    # 3. Distribute SSH public key to target nodes
+    # Distribute SSH public key to all nodes
     TARGET_NODES=("target-1" "target-2" "control-node")
     for TARGET in "${TARGET_NODES[@]}"; do
-        echo "--> Distributing SSH key to $TARGET for user $USERNAME..."
+        echo "--> Copying SSH public key to $TARGET for $USERNAME..."
+        for attempt in {1..15}; do
+            if nc -z -w 2 "$TARGET" 22 2>/dev/null; then
+                break
+            fi
+            sleep 2
+        done
+
         sshpass -p "$USER_PASS" ssh-copy-id \
             -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=/dev/null \
@@ -157,10 +47,14 @@ EOF
     done
 }
 
-# Setup for both 'vagrant' and 'ansible' users
-setup_user_environment "vagrant" "vagrant"
-setup_user_environment "ansible" "ansible"
+# Setup SSH keypair and distribute to targets for both 'vagrant' and 'ansible'
+setup_ssh_keys "vagrant" "vagrant"
+setup_ssh_keys "ansible" "ansible"
 
-echo "========================================="
-echo " [CONTROLLER] Ansible Controller Ready!"
-echo "========================================="
+echo "=========================================================="
+echo " [CONTROLLER] SSH Keys successfully configured!"
+echo " Nodes: control-node (192.168.56.10)"
+echo "        target-1     (192.168.56.11)"
+echo "        target-2     (192.168.56.12)"
+echo " You are now ready to install Ansible & learn step-by-step!"
+echo "=========================================================="

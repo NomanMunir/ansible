@@ -92,48 +92,62 @@ If you have Hyper-V enabled on Windows (Windows Pro/Enterprise/Education):
 
 ---
 
-## 🎮 Accessing the Lab & Running Ansible
+## 🎮 Using the Lab & Following Your Course
 
 ### 1. Connect to the Controller Node
-From your terminal:
 ```bash
 vagrant ssh control-node
 ```
-*(Or directly via SSH: `ssh vagrant@192.168.56.10` with password `vagrant`)*
 
-### 2. Navigate to the Ansible Lab Workspace
-The setup script pre-configures a workspace ready to go:
+### 2. Verify Passwordless SSH to Targets
+The nodes are configured with passwordless SSH keys. Test connecting to the targets:
 ```bash
-cd ~/ansible-lab
+ssh target-1    # should connect without asking for password
+exit
+ssh target-2    # should connect without asking for password
+exit
 ```
 
-Inside this directory:
-- `ansible.cfg`: Pre-configured default settings (host key checking disabled, yaml callback).
-- `inventory.ini`: Pre-populated with `[control]`, `[webservers]`, `[dbservers]`, and `[targets]`.
-- `playbooks/`: Starter playbooks for immediate practice.
+---
 
-### 3. Test Connectivity (Ansible Ping)
-Run the ad-hoc ping command:
+## 📚 Step-by-Step Learning Practice (KodeKloud Course)
+
+### Step 1: Install Ansible on `control-node`
 ```bash
-ansible all -m ping
-```
-*Expected output:* All nodes (`control-node`, `target-1`, `target-2`) will report `"ping": "pong"` and `SUCCESS`.
-
-### 4. Run Sample Playbooks
-```bash
-# 1. Ping test playbook
-ansible-playbook playbooks/01-ping.yml
-
-# 2. Gather facts from target machines
-ansible-playbook playbooks/02-gather-facts.yml
-
-# 3. Install and start Nginx on webservers (target-1)
-ansible-playbook playbooks/03-install-nginx.yml
+sudo apt update
+sudo apt install -y ansible
+ansible --version
 ```
 
-Verify Nginx on `target-1` by curling it from the controller:
+### Step 2: Create your Inventory File
+Create an inventory file named `inventory.ini` or `hosts`:
+```ini
+[webservers]
+target-1 ansible_host=192.168.56.11
+
+[dbservers]
+target-2 ansible_host=192.168.56.12
+```
+
+### Step 3: Test Ad-Hoc Ping Command
 ```bash
-curl http://192.168.56.11
+ansible all -i inventory.ini -m ping
+```
+
+### Step 4: Write Your First Playbook
+Create a test playbook `test.yml`:
+```yaml
+---
+- name: Test Playbook
+  hosts: all
+  tasks:
+    - name: Ping all nodes
+      ansible.builtin.ping:
+```
+
+Run it:
+```bash
+ansible-playbook -i inventory.ini test.yml
 ```
 
 ---
